@@ -1,0 +1,6 @@
+{
+  "name": "Arabic Platforms Directory",
+  "description": "An interactive showcase and advertisement directory for useful Arabic digital products and platforms, with voting, user feedback, and secure persistence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

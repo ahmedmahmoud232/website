@@ -1,0 +1,76 @@
+{
+  "entities": {
+    "Platform": {
+      "title": "Platform",
+      "description": "An Arabic digital platform or product to be advertised and reviewed.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "description": "The name of the platform." },
+        "url": { "type": "string", "description": "The URL link to the platform." },
+        "description": { "type": "string", "description": "Description in the format: brief overview - latest improvement - version" },
+        "category": { "type": "string", "description": "The category of the platform (e.g., Education, Tech, AI, Commerce)." },
+        "imageUrl": { "type": "string", "description": "The image asset or advertising visual URL." },
+        "voteCount": { "type": "integer", "description": "The net dynamic upvotes score." },
+        "ownerId": { "type": "string", "description": "The UID of the creator who registered the platform." },
+        "ownerName": { "type": "string", "description": "The display name of the creator." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "url", "description", "category", "imageUrl", "voteCount", "ownerId", "ownerName", "createdAt"]
+    },
+    "Upvote": {
+      "title": "Upvote",
+      "description": "An upvote document indicating that a user liked a platform.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "createdAt"]
+    },
+    "Advice": {
+      "title": "Advice",
+      "description": "Constructive user feedback and advice on improving the platform.",
+      "type": "object",
+      "properties": {
+        "content": { "type": "string", "description": "The feedback message text in Arabic." },
+        "authorId": { "type": "string", "description": "The writer's Google Auth UID." },
+        "authorName": { "type": "string", "description": "The writer's display name." },
+        "authorPhoto": { "type": "string", "description": "The writer's profile image." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["content", "authorId", "authorName", "createdAt"]
+    },
+    "HeuristicRating": {
+      "title": "HeuristicRating",
+      "description": "A user's specific rating across the 10 Jacob Nielsen usability heuristics.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "ratings": { "type": "object" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "ratings", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/platforms/{platformId}": {
+      "schema": "Platform",
+      "description": "The collection of advertised Arabic platforms."
+    },
+    "/platforms/{platformId}/upvotes/{userId}": {
+      "schema": "Upvote",
+      "description": "Subcollection storing users who upvoted the platform to prevent double voting."
+    },
+    "/platforms/{platformId}/advices/{adviceId}": {
+      "schema": "Advice",
+      "description": "Subcollection under each platform storing constructive user advice."
+    },
+    "/platforms/{platformId}/heuristic_ratings/{userId}": {
+      "schema": "HeuristicRating",
+      "description": "Subcollection under each platform storing 10 usability ratings by various users."
+    }
+  }
+}

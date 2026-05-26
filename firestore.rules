@@ -1,0 +1,123 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn();
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity validation functions
+    function isValidPlatform(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.url is string && data.url.size() >= 5 && data.url.size() <= 200
+        && data.description is string && data.description.size() > 0 && data.description.size() <= 2000
+        && data.category is string && data.category.size() > 0 && data.category.size() <= 50
+        && data.imageUrl is string && data.imageUrl.size() <= 500
+        && data.voteCount is int
+        && data.ownerId is string && data.ownerId == request.auth.uid
+        && data.ownerName is string && data.ownerName.size() <= 100
+        && data.createdAt is timestamp;
+    }
+
+    function isValidAdvice(data) {
+      return data.content is string && data.content.size() > 0 && data.content.size() <= 1000
+        && data.authorId is string && data.authorId == request.auth.uid
+        && data.authorName is string && data.authorName.size() <= 100
+        && (data.authorPhoto == null || (data.authorPhoto is string && data.authorPhoto.size() <= 500))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidUpvote(data) {
+      return data.userId is string && data.userId == request.auth.uid
+        && data.createdAt is timestamp;
+    }
+
+    function isValidHeuristicRating(data) {
+      return data.userId is string && data.userId == request.auth.uid
+        && data.userName is string && data.userName.size() <= 100
+        && data.ratings is map
+        && data.comment is string && data.comment.size() <= 2000
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isSignedIn() && userId == request.auth.uid;
+    }
+
+    match /platforms/{platformId} {
+      allow read: if true;
+      
+      allow create: if isEmailVerified() 
+        && isValidId(platformId)
+        && isValidPlatform(incoming())
+        && incoming().voteCount == 0
+        && incoming().createdAt == request.time;
+        
+      allow update: if isEmailVerified()
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && (
+          // Action 1: Owner updates metadata
+          (existing().ownerId == request.auth.uid 
+            && isValidPlatform(incoming())
+            && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'url', 'description', 'category', 'imageUrl', 'ownerName']))
+          ||
+          // Action 2: Anyone upvotes/downvotes
+          (incoming().diff(existing()).affectedKeys().hasOnly(['voteCount'])
+            && incoming().voteCount is int)
+        );
+        
+      allow delete: if isEmailVerified()
+        && existing().ownerId == request.auth.uid;
+        
+      // Subcollections
+      match /upvotes/{userId} {
+        allow read: if true;
+        allow create, delete: if isEmailVerified()
+          && userId == request.auth.uid
+          && (request.method == 'delete' || (isValidUpvote(incoming()) && incoming().createdAt == request.time));
+      }
+      
+      match /advices/{adviceId} {
+        allow read: if true;
+        allow create: if isEmailVerified()
+          && isValidId(adviceId)
+          && isValidAdvice(incoming())
+          && incoming().createdAt == request.time;
+          
+        allow delete: if isEmailVerified()
+          && existing().authorId == request.auth.uid;
+      }
+
+      match /heuristic_ratings/{userId} {
+        allow read: if true;
+        allow create, update: if isEmailVerified()
+          && userId == request.auth.uid
+          && isValidHeuristicRating(incoming())
+          && incoming().createdAt == request.time;
+      }
+    }
+  }
+}
